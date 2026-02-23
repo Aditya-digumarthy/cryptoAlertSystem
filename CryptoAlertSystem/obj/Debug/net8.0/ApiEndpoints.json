@@ -1,0 +1,55 @@
+[
+  {
+    "ContainingType": "CryptoAlertSystem.Controllers.AuthController",
+    "Method": "Login",
+    "RelativePath": "api/auth/login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "CryptoAlertSystem.Models.LoginRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "CryptoAlertSystem.Controllers.SubscriptionsController",
+    "Method": "GetSubscriptions",
+    "RelativePath": "api/subscriptions",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "CryptoAlertSystem.Controllers.TicksController",
+    "Method": "GetRecentTicks",
+    "RelativePath": "api/ticks/{symbol}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "symbol",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "limit",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

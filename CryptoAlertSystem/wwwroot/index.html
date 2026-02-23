@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CryptoAlert — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #050810;
+    --surface: #0c1120;
+    --surface2: #111827;
+    --border: #1e2d45;
+    --accent: #00f5c4;
+    --accent2: #0ea5e9;
+    --accent3: #f59e0b;
+    --red: #ef4444;
+    --green: #00f5c4;
+    --text: #e2e8f0;
+    --muted: #475569;
+    --font-mono: 'Space Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,196,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,196,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glowing orbs */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,245,196,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 20px rgba(0,245,196,0.3);
+  }
+
+  .logo-text {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.3s;
+  }
+
+  .status-dot.connected {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* LOGIN PANEL */
+  .login-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 440px;
+    margin: 60px auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .login-panel h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .login-panel p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+    font-family: var(--font-mono);
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+  }
+
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,245,196,0.1);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    color: #050810;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(0,245,196,0.3);
+  }
+
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* MAIN DASHBOARD */
+  .dashboard { display: none; }
+  .dashboard.visible { display: block; }
+
+  /* USER BAR */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #050810;
+  }
+
+  .user-name { font-weight: 600; font-size: 15px; }
+  .user-role { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+
+  .btn-sm {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: auto;
+    margin-top: 0;
+  }
+
+  .btn-sm:hover { border-color: var(--red); color: var(--red); }
+
+  /* SUBSCRIBE SECTION */
+  .subscribe-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+    font-family: var(--font-mono);
+  }
+
+  .symbol-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .symbol-chip {
+    padding: 8px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+  }
+
+  .symbol-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .symbol-chip.active {
+    background: rgba(0,245,196,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,245,196,0.15);
+  }
+
+  /* PRICE CARDS GRID */
+  .prices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .price-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    animation: cardIn 0.4s ease forwards;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .price-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .price-card.flash::before { opacity: 1; }
+
+  .price-card.up { border-color: rgba(0,245,196,0.3); }
+  .price-card.down { border-color: rgba(239,68,68,0.3); }
+
+  .card-symbol {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: rgba(0,245,196,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,245,196,0.2);
+  }
+
+  .card-price {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    transition: color 0.3s;
+    letter-spacing: -1px;
+  }
+
+  .card-price.up { color: var(--green); }
+  .card-price.down { color: var(--red); }
+
+  .card-change {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .card-change.up { color: var(--green); }
+  .card-change.down { color: var(--red); }
+
+  .card-volume {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* LIVE FEED */
+  .feed-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+
+  .feed-list {
+    height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .feed-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 80px;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    transition: background 0.2s;
+    animation: feedIn 0.3s ease forwards;
+    align-items: center;
+  }
+
+  @keyframes feedIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .feed-item:hover { background: var(--surface2); }
+
+  .feed-symbol {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .feed-price { color: var(--text); }
+  .feed-volume { color: var(--muted); }
+
+  .feed-time { color: var(--muted); text-align: right; }
+
+  .feed-dir.up { color: var(--green); }
+  .feed-dir.down { color: var(--red); }
+
+  /* LOG SECTION */
+  .log-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .log-list {
+    height: 160px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .log-item {
+    padding: 6px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    animation: feedIn 0.3s ease forwards;
+  }
+
+  .log-item .log-time { color: var(--accent2); margin-right: 8px; }
+  .log-item.success .log-msg { color: var(--accent); }
+  .log-item.error .log-msg { color: var(--red); }
+  .log-item.info .log-msg { color: var(--text); }
+  .log-item.warn .log-msg { color: var(--accent3); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .hidden { display: none !important; }
+
+  /* Error message */
+  .error-msg {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--red);
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .feed-item { grid-template-columns: 70px 1fr 60px; }
+    .feed-volume { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">₿</div>
+      <div class="logo-text">Crypto<span>Alert</span></div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">DISCONNECTED</span>
+    </div>
+  </header>
+
+  <!-- LOGIN PANEL -->
+  <div id="loginPanel" class="login-panel">
+    <h2>Welcome Back</h2>
+    <p>// sign in to access live crypto feed</p>
+
+    <div class="form-group">
+      <label>API Base URL</label>
+      <input type="text" id="baseUrl" value="https://localhost:7001" placeholder="https://localhost:7001"/>
+    </div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="username" value="admin" placeholder="admin"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" value="admin123" placeholder="admin123"/>
+    </div>
+    <button class="btn" id="loginBtn" onclick="login()">Connect to System</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="dashboard" class="dashboard">
+
+    <!-- USER BAR -->
+    <div class="user-bar">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div>
+          <div class="user-name" id="userNameDisplay">Admin</div>
+          <div class="user-role">// authenticated via JWT Bearer</div>
+        </div>
+      </div>
+      <button class="btn-sm" onclick="logout()">Disconnect</button>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Tick Count</div>
+        <div class="stat-value" id="statTicks">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Subs</div>
+        <div class="stat-value" id="statSubs">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Updates/sec</div>
+        <div class="stat-value" id="statUps">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Latency</div>
+        <div class="stat-value" id="statLatency">--</div>
+      </div>
+    </div>
+
+    <!-- SUBSCRIBE SECTION -->
+    <div class="subscribe-section">
+      <div class="section-title">// subscribe to trading pairs</div>
+      <div class="symbol-grid">
+        <div class="symbol-chip" id="chip-BTCUSDT" onclick="toggleSymbol('BTCUSDT')">BTCUSDT</div>
+        <div class="symbol-chip" id="chip-ETHUSDT" onclick="toggleSymbol('ETHUSDT')">ETHUSDT</div>
+        <div class="symbol-chip" id="chip-BNBUSDT" onclick="toggleSymbol('BNBUSDT')">BNBUSDT</div>
+        <div class="symbol-chip" id="chip-SOLUSDT" onclick="toggleSymbol('SOLUSDT')">SOLUSDT</div>
+        <div class="symbol-chip" id="chip-XRPUSDT" onclick="toggleSymbol('XRPUSDT')">XRPUSDT</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">
+        Click a symbol to subscribe → prices will update every 500ms via SignalR
+      </div>
+    </div>
+
+    <!-- PRICE CARDS -->
+    <div class="prices-grid" id="pricesGrid"></div>
+
+    <!-- LIVE FEED -->
+    <div class="feed-section">
+      <div class="feed-header">
+        <div class="section-title" style="margin:0">// live price feed</div>
+        <div class="live-indicator">
+          <div class="live-dot"></div>
+          LIVE · 500ms
+        </div>
+      </div>
+      <div class="feed-list" id="feedList">
+        <div style="text-align:center;padding:40px;font-family:var(--font-mono);font-size:13px;color:var(--muted)">
+          Subscribe to a symbol to see live feed...
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM LOG -->
+    <div class="log-section">
+      <div class="feed-header">
+        <div class="section-title" style="margin:0">// system log</div>
+        <button class="btn-sm" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let connection = null;
+let jwtToken = null;
+let subscribedSymbols = new Set();
+let priceHistory = {};
+let tickCount = 0;
+let updateCounter = 0;
+let baseUrl = '';
+
+// ─────────────────────────────────────────
+// LOGGING
+// ─────────────────────────────────────────
+function log(msg, type = 'info') {
+  const list = document.getElementById('logList');
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const item = document.createElement('div');
+  item.className = `log-item ${type}`;
+  item.innerHTML = `<span class="log-time">[${time}]</span><span class="log-msg">${msg}</span>`;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 100) list.removeChild(list.lastChild);
+}
+
+function clearLog() {
+  document.getElementById('logList').innerHTML = '';
+}
+
+// ─────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────
+async function login() {
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  btn.disabled = true;
+  btn.textContent = 'Connecting...';
+  errEl.style.display = 'none';
+
+  try {
+    const resp = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!resp.ok) throw new Error('Invalid credentials');
+
+    const data = await resp.json();
+    jwtToken = data.token;
+
+    log(`✓ Authenticated as ${username} (${data.userId})`, 'success');
+    log(`✓ JWT token received — expires in ${data.expiresIn}s`, 'success');
+
+    document.getElementById('userAvatar').textContent = username[0].toUpperCase();
+    document.getElementById('userNameDisplay').textContent = username;
+
+    document.getElementById('loginPanel').style.display = 'none';
+    document.getElementById('dashboard').classList.add('visible');
+
+    await connectSignalR();
+
+  } catch (err) {
+    errEl.textContent = `Error: ${err.message}. Check your Base URL and credentials.`;
+    errEl.style.display = 'block';
+    log(`✗ Login failed: ${err.message}`, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Connect to System';
+  }
+}
+
+// ─────────────────────────────────────────
+// SIGNALR CONNECTION
+// ─────────────────────────────────────────
+async function connectSignalR() {
+  const hubUrl = `${baseUrl}/hubs/crypto`;
+  log(`Connecting to SignalR hub: ${hubUrl}`, 'info');
+
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${hubUrl}?access_token=${jwtToken}`)
+    .withAutomaticReconnect([0, 2000, 5000, 10000])
+    .configureLogging(signalR.LogLevel.Warning)
+    .build();
+
+  // ── Receive price updates ──
+  connection.on('PriceUpdate', (data) => {
+    tickCount++;
+    updateCounter++;
+    document.getElementById('statTicks').textContent = tickCount.toLocaleString();
+    handlePriceUpdate(data);
+  });
+
+  // ── Subscription confirmed ──
+  connection.on('Subscribed', (symbol) => {
+    log(`✓ Server confirmed subscription to ${symbol}`, 'success');
+  });
+
+  connection.on('Unsubscribed', (symbol) => {
+    log(`✓ Server confirmed unsubscription from ${symbol}`, 'warn');
+  });
+
+  // ── Connection events ──
+  connection.onreconnecting(() => {
+    setStatus('RECONNECTING', false, false);
+    log('Connection lost — attempting reconnect...', 'warn');
+  });
+
+  connection.onreconnected(() => {
+    setStatus('CONNECTED', true, false);
+    log('✓ Reconnected successfully', 'success');
+    // Re-subscribe to all symbols
+    subscribedSymbols.forEach(s => connection.invoke('SubscribeToSymbol', s));
+  });
+
+  connection.onclose(() => {
+    setStatus('DISCONNECTED', false, false);
+    log('✗ Connection closed', 'error');
+  });
+
+  try {
+    const t0 = Date.now();
+    await connection.start();
+    const latency = Date.now() - t0;
+    setStatus('CONNECTED', true, false);
+    document.getElementById('statLatency').textContent = `${latency}ms`;
+    log(`✓ SignalR connected (${latency}ms handshake)`, 'success');
+    log('Ready — click a symbol chip to subscribe', 'info');
+  } catch (err) {
+    setStatus('ERROR', false, true);
+    log(`✗ SignalR connection failed: ${err.message}`, 'error');
+    log('Make sure your API is running and CORS allows this origin', 'warn');
+  }
+}
+
+// ─────────────────────────────────────────
+// STATUS INDICATOR
+// ─────────────────────────────────────────
+function setStatus(text, connected, error) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (connected ? ' connected' : error ? ' error' : '');
+}
+
+// ─────────────────────────────────────────
+// SUBSCRIBE / UNSUBSCRIBE
+// ─────────────────────────────────────────
+async function toggleSymbol(symbol) {
+  if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+    log('Not connected to SignalR hub', 'error');
+    return;
+  }
+
+  const chip = document.getElementById(`chip-${symbol}`);
+
+  if (subscribedSymbols.has(symbol)) {
+    // Unsubscribe
+    await connection.invoke('UnsubscribeFromSymbol', symbol);
+    subscribedSymbols.delete(symbol);
+    chip.classList.remove('active');
+    removeCard(symbol);
+    log(`Unsubscribed from ${symbol}`, 'warn');
+  } else {
+    // Subscribe
+    await connection.invoke('SubscribeToSymbol', symbol);
+    subscribedSymbols.add(symbol);
+    chip.classList.add('active');
+    createCard(symbol);
+    log(`Subscribing to ${symbol}...`, 'info');
+  }
+
+  document.getElementById('statSubs').textContent = subscribedSymbols.size;
+}
+
+// ─────────────────────────────────────────
+// PRICE CARDS
+// ─────────────────────────────────────────
+function createCard(symbol) {
+  if (document.getElementById(`card-${symbol}`)) return;
+
+  const grid = document.getElementById('pricesGrid');
+  const card = document.createElement('div');
+  card.className = 'price-card';
+  card.id = `card-${symbol}`;
+  card.innerHTML = `
+    <div class="card-symbol">
+      <span>${symbol}</span>
+      <span class="card-badge">LIVE</span>
+    </div>
+    <div class="card-price" id="price-${symbol}">---.--</div>
+    <div class="card-change" id="change-${symbol}">
+      <span>Waiting for data...</span>
+    </div>
+    <div class="card-volume" id="vol-${symbol}">Vol: --</div>
+  `;
+  grid.appendChild(card);
+}
+
+function removeCard(symbol) {
+  const card = document.getElementById(`card-${symbol}`);
+  if (card) card.remove();
+  delete priceHistory[symbol];
+}
+
+// ─────────────────────────────────────────
+// HANDLE PRICE UPDATE
+// ─────────────────────────────────────────
+function handlePriceUpdate(data) {
+  const { symbol, price, volume, timestamp } = data;
+
+  if (!subscribedSymbols.has(symbol)) return;
+
+  const prev = priceHistory[symbol];
+  const direction = prev ? (price > prev ? 'up' : price < prev ? 'down' : 'flat') : 'flat';
+  priceHistory[symbol] = price;
+
+  // Update card
+  const priceEl = document.getElementById(`price-${symbol}`);
+  const changeEl = document.getElementById(`change-${symbol}`);
+  const volEl = document.getElementById(`vol-${symbol}`);
+  const card = document.getElementById(`card-${symbol}`);
+
+  if (!priceEl) return;
+
+  const formatted = parseFloat(price).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6
+  });
+
+  priceEl.textContent = `$${formatted}`;
+  priceEl.className = `card-price ${direction}`;
+
+  const arrow = direction === 'up' ? '▲' : direction === 'down' ? '▼' : '●';
+  const pct = prev ? (((price - prev) / prev) * 100).toFixed(4) : '0.0000';
+  changeEl.className = `card-change ${direction}`;
+  changeEl.innerHTML = `<span>${arrow} ${pct}%</span>`;
+
+  const volFormatted = parseFloat(volume).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  volEl.textContent = `Vol: ${volFormatted}`;
+
+  if (card) {
+    card.className = `price-card ${direction}`;
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 300);
+  }
+
+  // Add to live feed
+  addFeedItem(symbol, price, volume, direction, timestamp);
+}
+
+// ─────────────────────────────────────────
+// LIVE FEED
+// ─────────────────────────────────────────
+let feedItemCount = 0;
+
+function addFeedItem(symbol, price, volume, direction, timestamp) {
+  const feedList = document.getElementById('feedList');
+
+  // Remove placeholder
+  if (feedItemCount === 0) feedList.innerHTML = '';
+  feedItemCount++;
+
+  const arrow = direction === 'up' ? '▲' : direction === 'down' ? '▼' : '●';
+  const time = new Date(timestamp).toLocaleTimeString('en-US', { hour12: false });
+  const priceStr = parseFloat(price).toLocaleString('en-US', {
+    minimumFractionDigits: 2, maximumFractionDigits: 6
+  });
+  const volStr = parseFloat(volume).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML = `
+    <span class="feed-symbol">${symbol}</span>
+    <span class="feed-price">$${priceStr}</span>
+    <span class="feed-volume">${volStr}</span>
+    <span class="feed-time feed-dir ${direction}">${arrow} ${time}</span>
+  `;
+
+  feedList.insertBefore(item, feedList.firstChild);
+
+  // Keep max 100 items
+  while (feedList.children.length > 100) feedList.removeChild(feedList.lastChild);
+}
+
+// ─────────────────────────────────────────
+// STATS COUNTER (updates/sec)
+// ─────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('statUps').textContent = updateCounter;
+  updateCounter = 0;
+}, 1000);
+
+// ─────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────
+async function logout() {
+  if (connection) await connection.stop();
+  jwtToken = null;
+  subscribedSymbols.clear();
+  priceHistory = {};
+  tickCount = 0;
+  feedItemCount = 0;
+  document.getElementById('pricesGrid').innerHTML = '';
+  document.getElementById('feedList').innerHTML = '';
+  document.getElementById('dashboard').classList.remove('visible');
+  document.getElementById('loginPanel').style.display = 'block';
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginBtn').textContent = 'Connect to System';
+  setStatus('DISCONNECTED', false, false);
+}
+
+// Enter key on login
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.getElementById('loginPanel').style.display !== 'none') {
+    login();
+  }
+});
+</script>
+</body>
+</html>
