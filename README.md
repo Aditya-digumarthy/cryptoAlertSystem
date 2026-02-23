@@ -1,8 +1,8 @@
 # cryptoAlertSystem
-“Real-time crypto price alerts with SignalR, MediatR (CQRS), and PostgreSQL.”
+Real-time crypto price alerts with SignalR, MediatR (CQRS), and PostgreSQL.
 
 
-## 🚀 Real-Time Crypto Price Alert System
+## Real-Time Crypto Price Alert System
 
 This project is a **.NET 8 Web API** that delivers real-time cryptocurrency price updates using **SignalR** and **MediatR (CQRS pattern)**.
 It consumes live market data from a public WebSocket API (e.g., Binance) and broadcasts updates every **500ms** to subscribed users via SignalR groups.
